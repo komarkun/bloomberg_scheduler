@@ -49,6 +49,7 @@ jobs:
       - name: Setup Deploy Environment
         run: |
           cp /opt/bloomberg_scheduler/.env.production ./.env
+          cp /opt/bloomberg_scheduler/ps-credential.txt ./ps-credential.txt
 
       - name: Deploy to Server
         run: |
