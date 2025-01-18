@@ -33,6 +33,7 @@ jobs:
       - name: Health Check
         run: |
           echo "Checking application health"
+          sleep 20  # Wait for 20 seconds before running the health check
           health_check=$(curl -s http://localhost:8080/health)
           echo "Health check response: $health_check"
           if echo "$health_check" | grep -q '"status": "healthy"'; then
