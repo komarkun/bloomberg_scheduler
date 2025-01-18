@@ -19,7 +19,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker compose -f docker-compose.yml up -d --build
+          docker compose -f docker-compose.yaml up -d --build
 
   deploy:
     runs-on: bati
@@ -32,4 +32,4 @@ jobs:
 
       - name: Deploy to server
         run: |
-          docker compose -f docker-compose.yml restart
+          docker compose -f docker-compose.yaml restart
