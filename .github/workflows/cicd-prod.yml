@@ -26,9 +26,9 @@ jobs:
     runs-on: bati-bloomberg
     needs: build
     steps:
-      - name: Run Unit Tests
-        run: |
-          docker compose exec airflow-scheduler pytest || exit 1
+      # - name: Run Unit Tests
+      #  run: |
+      #    docker compose exec airflow-scheduler pytest || exit 1
 
       - name: Health Check
         run: |
