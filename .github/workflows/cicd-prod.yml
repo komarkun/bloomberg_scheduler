@@ -36,7 +36,7 @@ jobs:
           echo "Installing dependencies for Airflow services"
           services=(airflow_worker airflow_webserver airflow_triggerer airflow_scheduler airflow_cli)
           for service in "${services[@]}"; do
-            docker compose exec $service pip install -r /opt/requirements.txt || exit 1
+            docker compose exec $service pip install -r requirements.txt || exit 1
           done
 
       - name: Run Unit Tests with .env.test
