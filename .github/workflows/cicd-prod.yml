@@ -25,40 +25,9 @@ jobs:
     runs-on: bati-bloomberg
     needs: build
     steps:
-      - name: Setup Test Environment
-        run: |
-          # Use .env.test if available, otherwise use .env.staging
-          if [ -f "/opt/bloomberg_scheduler/.env.test" ]; then
-            cp /opt/bloomberg_scheduler/.env.test ./.env
-          elif [ -f "/opt/bloomberg_scheduler/.env.staging" ]; then
-            cp /opt/bloomberg_scheduler/.env.staging ./.env
-          else
-            echo "Skipping tests: No test environment file found"
-            exit 0  # Exit with success to avoid failing the pipeline
-          fi
-
-      - name: Install Dependencies
-        run: |
-          services=(airflow-worker airflow-webserver airflow-triggerer airflow-scheduler airflow-cli)
-          for service in "${services[@]}"; do
-            docker compose exec $service pip install -r requirements.txt
-          done
-
       - name: Run Unit Tests
         run: |
-          docker compose run airflow-scheduler pytest
-
-  deploy:
-    runs-on: bati-bloomberg
-    needs: [build, test] # Deploy only after successful build and test
-    steps:
-      - name: Setup Deploy Environment
-        run: |
-          cp /opt/bloomberg_scheduler/.env.production ./.env
-
-      - name: Deploy to Server
-        run: |
-          docker compose restart
+          docker compose exec airflow-scheduler pytest
 
       - name: Health Check
         run: |
@@ -71,6 +40,18 @@ jobs:
             echo "Health check failed"
             exit 1
           fi
+
+  deploy:
+    runs-on: bati-bloomberg
+    needs: [build, test] # Deploy only after successful build and test
+    steps:
+      - name: Setup Deploy Environment
+        run: |
+          cp /opt/bloomberg_scheduler/.env.production ./.env
+
+      - name: Deploy to Server
+        run: |
+          docker compose restart
 
       - name: Clean Up Resources
         run: |
