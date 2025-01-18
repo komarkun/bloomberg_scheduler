@@ -15,6 +15,7 @@ jobs:
       - name: Setup Build Environment
         run: |
           cp /opt/bloomberg_scheduler/.env.production ./.env
+          cp /opt/bloomberg_scheduler/ps-credential.txt ./ps-credential.txt
           docker compose pull
 
       - name: Build and Start Docker Containers
@@ -27,7 +28,7 @@ jobs:
     steps:
       - name: Run Unit Tests
         run: |
-          docker compose exec airflow-scheduler pytest
+          docker compose exec airflow-scheduler pytest || exit 1
 
       - name: Health Check
         run: |
