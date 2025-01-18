@@ -22,7 +22,7 @@ jobs:
           docker compose -f docker-compose.yaml up -d --build
 
   deploy:
-    runs-on: bati
+    runs-on: bati-bloomberg
     needs: build
 
     steps:
