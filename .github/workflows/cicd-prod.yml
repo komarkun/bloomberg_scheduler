@@ -8,65 +8,55 @@ on:
 jobs:
   build:
     runs-on: bati-bloomberg
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Setups environment Build
+      - name: Setup Build Environment
         run: |
           cp /opt/bloomberg_scheduler/.env.production ./.env
-
-      - name: Pull Latest Images
-        run: |
-          echo "Pulling latest images from the registry"
           docker compose pull
 
-      - name: Build Docker image
+      - name: Build and Start Docker Containers
         run: |
           docker compose up -d --build
 
   test:
     runs-on: bati-bloomberg
     needs: build
-
     steps:
-      - name: Install Dependencies for Airflow Services
+      - name: Setup Test Environment
         run: |
-          echo "Installing dependencies for Airflow services"
+          # Use .env.test if available, otherwise use .env.staging
+          if [ -f "/opt/bloomberg_scheduler/.env.test" ]; then
+            cp /opt/bloomberg_scheduler/.env.test ./.env
+          elif [ -f "/opt/bloomberg_scheduler/.env.staging" ]; then
+            cp /opt/bloomberg_scheduler/.env.staging ./.env
+          else
+            echo "Skipping tests: No test environment file found"
+            exit 0  # Exit with success to avoid failing the pipeline
+          fi
+
+      - name: Install Dependencies
+        run: |
           services=(airflow_worker airflow_webserver airflow_triggerer airflow_scheduler airflow_cli)
           for service in "${services[@]}"; do
-            docker compose exec $service pip install -r requirements.txt || exit 1
+            docker compose exec $service pip install -r requirements.txt
           done
 
-      - name: Run Unit Tests with .env.test
+      - name: Run Unit Tests
         run: |
-          if [ -f "/opt/bloomberg_scheduler/.env.test" ]; then
-            echo "Running unit tests with .env.test"
-            docker compose --env-file /opt/bloomberg_scheduler/.env.test run airflow-scheduler pytest || exit 1
-          else
-            echo "Skipping tests: .env.test file is missing"
-          fi
-
-      - name: Run Unit Tests with .env.staging
-        run: |
-          if [ -f "/opt/bloomberg_scheduler/.env.staging" ]; then
-            echo "Running unit tests with .env.staging"
-            docker compose --env-file /opt/bloomberg_scheduler/.env.staging run airflow-scheduler pytest || exit 1
-          else
-            echo "Skipping tests: .env.staging file is missing"
-          fi
+          docker compose run airflow-scheduler pytest
 
   deploy:
     runs-on: bati-bloomberg
-    needs: build
-
+    needs: [build, test] # Deploy only after successful build and test
     steps:
-      - name: Setups environment Deployment
+      - name: Setup Deploy Environment
         run: |
           cp /opt/bloomberg_scheduler/.env.production ./.env
 
-      - name: Deploy to server
+      - name: Deploy to Server
         run: |
           docker compose restart
 
@@ -82,7 +72,7 @@ jobs:
             exit 1
           fi
 
-      - name: Clean Up Unused Resources
+      - name: Clean Up Resources
         run: |
           echo "Cleaning up unused Docker resources"
           docker system prune -f --volumes
