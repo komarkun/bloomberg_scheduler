@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: Setups environment Deployment
         run: |
-          cp /opt/bloomberg_scheduler/.env ./.env
+          cp /opt/bloomberg_scheduler/.env.production ./.env
 
       - name: Deploy to server
         run: |
