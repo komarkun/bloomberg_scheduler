@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline Bati Bloomberg
 
 on:
   push:
@@ -17,9 +17,45 @@ jobs:
         run: |
           cp /opt/bloomberg_scheduler/.env.production ./.env
 
+      - name: Pull Latest Images
+        run: |
+          echo "Pulling latest images from the registry"
+          docker compose pull
+
       - name: Build Docker image
         run: |
-          docker compose -f docker-compose.yaml up -d --build
+          docker compose up -d --build
+
+  test:
+    runs-on: bati-bloomberg
+    needs: build
+
+    steps:
+      - name: Install Dependencies for Airflow Services
+        run: |
+          echo "Installing dependencies for Airflow services"
+          services=(airflow_worker airflow_webserver airflow_triggerer airflow_scheduler airflow_cli)
+          for service in "${services[@]}"; do
+            docker compose exec $service pip install -r /opt/requirements.txt || exit 1
+          done
+
+      - name: Run Unit Tests with .env.test
+        run: |
+          if [ -f "/opt/bloomberg_scheduler/.env.test" ]; then
+            echo "Running unit tests with .env.test"
+            docker compose --env-file /opt/bloomberg_scheduler/.env.test run airflow-scheduler pytest || exit 1
+          else
+            echo "Skipping tests: .env.test file is missing"
+          fi
+
+      - name: Run Unit Tests with .env.staging
+        run: |
+          if [ -f "/opt/bloomberg_scheduler/.env.staging" ]; then
+            echo "Running unit tests with .env.staging"
+            docker compose --env-file /opt/bloomberg_scheduler/.env.staging run airflow-scheduler pytest || exit 1
+          else
+            echo "Skipping tests: .env.staging file is missing"
+          fi
 
   deploy:
     runs-on: bati-bloomberg
@@ -32,4 +68,21 @@ jobs:
 
       - name: Deploy to server
         run: |
-          docker compose -f docker-compose.yaml restart
+          docker compose restart
+
+      - name: Health Check
+        run: |
+          echo "Checking application health"
+          health_check=$(curl -s http://localhost:8080/health)
+          echo "Health check response: $health_check"
+          if echo "$health_check" | grep -q '"status": "healthy"'; then
+            echo "Health check passed"
+          else
+            echo "Health check failed"
+            exit 1
+          fi
+
+      - name: Clean Up Unused Resources
+        run: |
+          echo "Cleaning up unused Docker resources"
+          docker system prune -f --volumes
