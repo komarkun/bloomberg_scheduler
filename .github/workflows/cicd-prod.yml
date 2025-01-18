@@ -1,0 +1,35 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: bati-bloomberg
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setups environment Build
+        run: |
+          cp /opt/bloomberg_scheduler/.env.production ./.env
+
+      - name: Build Docker image
+        run: |
+          docker compose -f docker-compose.yml up -d --build
+
+  deploy:
+    runs-on: bati
+    needs: build
+
+    steps:
+      - name: Setups environment Deployment
+        run: |
+          cp /opt/bloomberg_scheduler/.env ./.env
+
+      - name: Deploy to server
+        run: |
+          docker compose -f docker-compose.yml restart
